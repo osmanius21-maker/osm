@@ -1,14 +1,17 @@
 @echo off
+setlocal enabledelayedexpansion
 title Ngrok Auto-Update System (Active)
+
 :: ==========================================
 :: 1. Configuration
 :: ==========================================
-set GITHUB_USER=osmanius21-maker
-set GITHUB_REPO=osm
-set GITHUB_TOKEN=ghp_K0834MD40W60IOMn18XpiyIwVoHG63vzAIl
-set LOCAL_PORT=4444
-set FILE_NAME=ip.txt
-set LAST_LINK=none
+:: Note: GITHUB_TOKEN is now pulled from System Environment Variables for security.
+set "GH_USER=osmanius21-maker"
+set "GH_REPO=osm"
+set "LOCAL_PORT=4444"
+set "FILE_NAME=link.txt"
+set "LOG_FILE=history.log"
+set "LAST_LINK=none"
 
 :: ==========================================
 :: 2. Launch Ngrok in Background
@@ -27,14 +30,14 @@ echo ==========================================
 echo    NGROK AUTO-UPDATE MONITORING
 echo ==========================================
 echo Status: Running... (Press CTRL+C to stop)
-echo Last Known Link: %LAST_LINK%
+echo Last Known Link: !LAST_LINK!
 echo ------------------------------------------
 
-:: Extract current link from Ngrok API
-for /f "delims=" %%i in ('powershell -command "(Invoke-WebRequest -Uri 'http://192.168.1.20:4040/api/tunnels' | ConvertFrom-Json).tunnels.public_url"') do set CURRENT_LINK=%%i
+:: Extract current link from Ngrok local API
+for /f "delims=" %%i in ('powershell -command "(Invoke-WebRequest -Uri 'http://192.168.1.20:4040/api/tunnels' | ConvertFrom-Json).tunnels.public_url"') do set "CURRENT_LINK=%%i"
 
 :: Check if Ngrok is down
-if "%CURRENT_LINK%"=="" (
+if "!CURRENT_LINK!"=="" (
     echo [!] ALERT: Ngrok API not responding! 
     echo [!] Attempting to restart Ngrok...
     start /min cmd /c "ngrok tcp %LOCAL_PORT%"
@@ -43,22 +46,35 @@ if "%CURRENT_LINK%"=="" (
 )
 
 :: Compare current link with the last one pushed
-if "%CURRENT_LINK%"=="%LAST_LINK%" (
-    echo [%time%] No change detected. Link is stable.
+if "!CURRENT_LINK!"=="!LAST_LINK!" (
+    echo [%date% %time%] No change detected. Link is stable.
 ) else (
-    echo [%time%] NEW LINK DETECTED: %CURRENT_LINK%
-    echo %CURRENT_LINK% > %FILE_NAME%
+    echo [%date% %time%] NEW LINK DETECTED: !CURRENT_LINK!
     
-    echo [+] Syncing with GitHub...
-    git add %FILE_NAME%
-    git commit -m "Auto-Update: Tunnel changed to %CURRENT_LINK%"
-    git push https://%GITHUB_USER%:%GITHUB_TOKEN%@github.com/%GITHUB_USER%/%GITHUB_REPO%.git main
+    :: Update current link file
+    echo !CURRENT_LINK! > %FILE_NAME%
     
-    set LAST_LINK=%CURRENT_LINK%
-    echo [+] GitHub Updated Successfully.
+    :: Log the change with timestamp
+    echo [%date% %time%] New Tunnel: !CURRENT_LINK! >> %LOG_FILE%
+    
+    echo [+] Syncing with GitHub Repository...
+    
+    :: Git Commands using Token from Environment Variable
+    git add %FILE_NAME% %LOG_FILE%
+    git commit -m "Auto-Update: Tunnel changed to !CURRENT_LINK!"
+    
+    :: Secure Push using Environment Variable %GITHUB_TOKEN%
+    git push https://%GH_USER%:%GITHUB_TOKEN%@github.com/%GH_USER%/%GH_REPO%.git main
+    
+    if !errorlevel! equ 0 (
+        set "LAST_LINK=!CURRENT_LINK!"
+        echo [+] GitHub Updated Successfully.
+    ) else (
+        echo [-] Error: Failed to push to GitHub. Check your Internet or Token.
+    )
 )
 
-:: Wait for 60 seconds before checking again
+:: Wait for 60 seconds before next check
 echo ------------------------------------------
 echo Next check in 60 seconds...
 timeout /t 60 >nul
