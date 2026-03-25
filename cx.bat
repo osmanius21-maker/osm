@@ -51,4 +51,19 @@ git push https://%GITHUB_USER%:%GITHUB_TOKEN%@github.com/%GITHUB_USER%/%GITHUB_R
 echo.
 echo [+] SUCCESS! Your "Static" GitHub Raw Link is:
 echo https://raw.githubusercontent.com/%GITHUB_USER%/%GITHUB_REPO%/main/%FILE_NAME%
-pause
+:: ==========================================
+:: 4. Keep Interface Active (The Loop)
+:: ==========================================
+echo.
+echo ==========================================
+echo [+] SUCCESS! The link is now live on GitHub.
+echo [+] Your Link: %NEW_LINK%
+echo [+] WORKSTATION STATUS: MONITORING...
+echo ==========================================
+echo [!] This window will stay open. Press CTRL+C to close.
+echo.
+
+:monitor
+echo [%time%] Status: Tunnel is active at %NEW_LINK%
+timeout /t 60 >nul
+goto monitor
