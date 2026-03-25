@@ -7,7 +7,7 @@ set GITHUB_USER=osmanius21-maker
 set GITHUB_REPO=osm
 set GITHUB_TOKEN=ghp_K0834MD40W60IOMn18XpiyIwVoHG63vzAIl
 set LOCAL_PORT=4444
-set FILE_NAME=link.txt
+set FILE_NAME=ip.txt
 set LAST_LINK=none
 
 :: ==========================================
