@@ -29,7 +29,7 @@ cls
 echo ==========================================
 echo    GITHUB DYNAMIC C2 UPDATER
 echo ==========================================
-echo Status: Active | Monitoring: %LOCAL_PORT%
+echo Status: Active
 echo Current Registered Link: !LAST_LINK!
 echo ------------------------------------------
 
