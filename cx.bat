@@ -22,7 +22,7 @@ timeout /t 10 >nul
 :: 3. Extract the TCP URL (Using PowerShell for Accuracy)
 :: ==========================================
 echo [+] Fetching public URL from Ngrok API...
-for /f "delims=" %%i in ('powershell -command "(Invoke-WebRequest -Uri 'http://127.0.0.1:4040/api/tunnels' | ConvertFrom-Json).tunnels.public_url"') do set NEW_LINK=%%i
+for /f "delims=" %%i in ('powershell -command "(Invoke-WebRequest -Uri 'http://192.168.1.20:4040/api/tunnels' | ConvertFrom-Json).tunnels.public_url"') do set NEW_LINK=%%i
 
 :: Check if the variable is empty (Ngrok failed to start or API unreachable)
 if "%NEW_LINK%"=="" (
