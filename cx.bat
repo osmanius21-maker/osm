@@ -3,7 +3,7 @@ setlocal
 
 :: ================= CONFIGURATION =================
 :: 1. Your GitHub Username
-set GITHUB_USER=YourUsername
+set GITHUB_USER=osmanius21-maker
 
 :: 2. Your Repository Name (e.g., "my-links")
 set GITHUB_REPO=osm
@@ -15,7 +15,7 @@ set GITHUB_TOKEN=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
 set LOCAL_PORT=4444
 
 :: 5. The filename to store the link on GitHub
-set FILE_NAME=ngrok_link.txt
+set FILE_NAME=cx.bat
 :: =================================================
 
 echo [+] Starting Ngrok TCP on port %LOCAL_PORT%...
